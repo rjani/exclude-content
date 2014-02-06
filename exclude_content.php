@@ -63,6 +63,8 @@ class ExcludeContent {
 	public function admin_menu() {
 		add_options_page( __('Exclude Content Settings', 'excon'), __('Exclude Content', 'excon'), 'manage_options', 'exclude_content.php', array($this, 'display_settings'));
 	}
+	
+	
 	/**
 	 * activation hook
 	 *
@@ -72,16 +74,27 @@ class ExcludeContent {
 		// check cat settings
 		$cat_settings = get_option('excon_cat_settings');
 		
-		if(!is_array($cat_settings)) {
+		$update = false;
+		if(is_array($cat_settings)) {
+			// check array
+			foreach ($this->cat_areas as $area) {
+				if(! isset($cat_settings[$area]) ) {
+					$cat_settings[$area] = array();
+					$update = true;
+				}
+			}			
+		} 
+		else {
+			$update = true;
 			// set and update cat settings 
 			$cat_settings = array();
 			foreach ($this->cat_areas as $area) {
 				$cat_settings[$area] = array();
 			}
+		}
+		if( $update ) {
 			update_option('excon_cat_settings', $cat_settings);
 		}
-		
-				
 	}
 	
 	/**
@@ -97,8 +110,7 @@ class ExcludeContent {
 	 * @since	0.1.0
 	 */
 	public static function on_uninstall() {
-		// TODO: remove settings
-	
+		delete_option('excon_cat_settings');
 	}
 
 	/**
@@ -156,21 +168,23 @@ class ExcludeContent {
 						<tr><?php 
 		foreach($this->cat_areas as $area) {
 							?><td>
-			<?php
+							<?php
 			foreach($categories as $cat) {
 				$id      = $cat->cat_ID;
 				$name    = $cat->cat_name.' ('.$id.')';
 				$html_id = 'exconcatset_'.$area.'_'.$cat->cat_ID;
 				$checked = ( in_array($id, $cat_settings[$area]) ? ' checked="checked"' : '');
 				
-				echo '<input type="checkbox" name="excon_cat_settings['.$area.'][]" value="'.$id.'" id="'.$html_id.'" '.$checked.' />';
-				echo ' <label for="'.$html_id.'">'.$name.'</label> <br />';						
+				echo '
+							<input type="checkbox" name="excon_cat_settings['.$area.'][]" value="'.$id.'" id="'.$html_id.'" '.$checked.' />'.
+						   '<label for="'.$html_id.'">'.$name.'</label> <br />';						
 			}
 							?></td><?php
 		}
 						?></tr>
 					</tbody>
 				</table>
+				<?php submit_button(); ?>
 			</form>
 		</div>
 		<?php
