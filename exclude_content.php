@@ -30,7 +30,7 @@ class ExcludeContent {
 	public static function init()
 	{
 		// load textdomain
-		load_plugin_textdomain( 'excon', false, 'exclude_content/languages/' );
+		// load_plugin_textdomain( 'excon', false, 'exclude_content/languages/' );
 		add_action('admin_init', array(__CLASS__, 'register_settings'));
 		add_action('admin_menu', array(__CLASS__, 'admin_menu'));
 		
@@ -45,14 +45,64 @@ class ExcludeContent {
 	 * @since	0.1.0
 	 * 
 	 * @param	object	$wp_query
-	 * @return	object	$wp_query
 	 */
 	public function exclude_contents($wp_query) {
+		// don't exclude in backend
+		if( is_admin() ) {
+			return;
+		}
+		// if only_main_query is set and the query is NOT the main_query ...
+		if( get_option('excon_only_main_query') === 1 && !$wp_query->is_main_query() ) { 
+			 return;
+		}
 		
 		
-		return $wp_query;
+		// get Options and create exclude Strings
+		$cat_settings = get_option('excon_cat_settings');
+		$exclude = array();
+		foreach(self::$cat_areas as $area) {
+			$exclude[$area] = $this->get_exclude_strings($cat_settings[$area]);
+		}
+		
+		// check conditional tags
+		if( $wp_query->is_home() ) {
+			if( $exclude['home'] ) 		
+				$wp_query->set('cat', $exclude['home']);
+			
+		} elseif ( $wp_query->is_archive() ) {
+			if ($exclude['archive'])
+				$wp_query->set('cat', $exclude['archive']);
+		
+		} elseif ( $wp_query->is_search() ) {
+			if( $exclude['search'] )
+				$wp_query->set('cat', $exclude['search']);
+			
+		} elseif ( $wp_query->is_feed() ) {
+			if( $exclude['feed'] ) 
+				$wp_query->set('cat', $exclude['feed']);
+			
+		} else {
+			// gererelles 
+			if( $exclude['general'] ) 
+				$wp_query->set('cat', $exclude['general']);
+		}
 	}
 	
+	
+	/**
+	 * wandelt ein array in einen sting mit negaiven Vorzeichen um
+	 *  
+	 * @param	array	$array( 1,2,8 )
+	 * @return	string	'-1,-2,-8'
+	 */
+	private function get_exclude_strings($array) {
+		$jarr = array();
+		foreach($array as $int) {
+			// $jarr[] = $int*-1;
+			$jarr[] = '-'.$int;
+		}
+		return join(',', $jarr);
+	}
 	
 	/**
 	 * Add Option Page to AdminMenu
@@ -73,25 +123,12 @@ class ExcludeContent {
 		// check cat settings
 		$cat_settings = get_option('excon_cat_settings');
 		
-		$update = false;
-		if(is_array($cat_settings)) {
-			// check array
-			foreach (self::$cat_areas as $area) {
-				if(! isset($cat_settings[$area]) ) {
-					$cat_settings[$area] = array();
-					$update = true;
-				}
-			}			
-		} 
-		else {
-			$update = true;
+		if(!is_array($cat_settings)) {
 			// set and update cat settings 
 			$cat_settings = array();
 			foreach (self::$cat_areas as $area) {
 				$cat_settings[$area] = array();
 			}
-		}
-		if( $update ) {
 			update_option('excon_cat_settings', $cat_settings);
 		}
 	}
@@ -155,11 +192,13 @@ class ExcludeContent {
 	public function display_settings() {
 		$cat_settings = get_option('excon_cat_settings');
 		$categories   = get_categories(array('hide_empty' => 0,	'order' => 'ASC'));
+		$only_main    = get_option('excon_only_main_query');
 		?>
 <style>
 ul.excon {}
 ul.excon > li {width: 330px;margin: 0 20px 36px 0;float:left;padding: 10px 0 12px 12px;position: relative;background: #fff;list-style: none;border-radius: 6px;white-space: nowrap;}
 ul.excon > li input[type="checkbox"] {display: inline-block;margin: 0 8px 0 0;}
+ul.excon > li select {height: 20px;font-size: 11px;text-align: center;background: #f8f8f9;}
 ul.excon > li label {cursor: default;display:inline-block;overflow: hidden;line-height: 24px;}
 ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:block;font-size:12px;line-height:16px;}
 </style>
