@@ -13,30 +13,44 @@ defined('ABSPATH') OR exit;
 
 
 /* Hooks */
-add_action( 'plugins_loaded', array('ExcludeContent', 'init') );
-
+add_action( 'plugins_loaded', 'exclude_content_init');
+function exclude_content_init() {
+	$excon = ExcludeContent::instance();
+}
 register_activation_hook(__FILE__,   array('ExcludeContent', 'on_activation') );
 register_deactivation_hook(__FILE__, array('ExcludeContent', 'on_deactivation') );
 register_uninstall_hook(__FILE__,    array('ExcludeContent', 'on_uninstall') );
 
+
+
 class ExcludeContent {
-	private static $cat_areas = array('general', 'home', 'archive', 'search', 'feed');
+	
+	private static $instance = 0;
+	private static $cat_areas = array('home', 'archive', 'search', 'feed', 'other');
 
 	/**
-	 * Initator der Klasse
+	 * Constructor
 	 *
 	 * @since	0.1.0
 	 */
-	public static function init()
-	{
+	public function __construct() {
 		// load textdomain
 		// load_plugin_textdomain( 'excon', false, 'exclude_content/languages/' );
-		add_action('admin_init', array(__CLASS__, 'register_settings'));
-		add_action('admin_menu', array(__CLASS__, 'admin_menu'));
+		add_action('admin_init', array($this, 'register_settings'));
+		add_action('admin_menu', array($this, 'admin_menu'));
 		
-		add_filter('pre_get_posts', array(__CLASS__, 'exclude_contents'));
-		
-		
+		add_filter('pre_get_posts', array($this, 'exclude_contents'));
+	}
+	
+	/**
+	 * create instance
+	 * @return number
+	 */
+	public static function instance() {
+		if ( self::$instance == 0 ) {
+			self::$instance = new ExcludeContent();
+		}
+		return self::$instance;
 	}
 	
 	/**
@@ -56,7 +70,7 @@ class ExcludeContent {
 			 return;
 		}
 		
-		
+		// *************** Categories *********************
 		// get Options and create exclude Strings
 		$cat_settings = get_option('excon_cat_settings');
 		$exclude = array();
@@ -83,8 +97,8 @@ class ExcludeContent {
 			
 		} else {
 			// gererelles 
-			if( $exclude['general'] ) 
-				$wp_query->set('cat', $exclude['general']);
+			if( $exclude['other'] ) 
+				$wp_query->set('cat', $exclude['other']);
 		}
 	}
 	
@@ -110,7 +124,7 @@ class ExcludeContent {
 	 * @since	0.1.0
 	 */
 	public function admin_menu() {
-		add_options_page( __('Exclude Content Settings', 'excon'), __('Exclude Content', 'excon'), 'manage_options', 'exclude_content.php', array(__CLASS__, 'display_settings'));
+		add_options_page( __('Exclude Content Settings', 'excon'), __('Exclude Content', 'excon'), 'manage_options', 'exclude_content.php', array($this, 'display_settings'));
 	}
 	
 	
@@ -156,7 +170,7 @@ class ExcludeContent {
 	 * @since	0.1.0
 	 */
 	public function register_settings() {
-		register_setting('exclude_content_settings', 'excon_cat_settings', array(__CLASS__, 'validate_options_cat'));
+		register_setting('exclude_content_settings', 'excon_cat_settings', array($this, 'validate_options_cat'));
 		register_setting('exclude_content_settings', 'excon_only_main_query');
 	}
 	
@@ -218,17 +232,18 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 			<div class="clear"></div>
 			
 			<h3><?php _e('Category Settings', 'excon')?></h3>
-			<p>Hier kann ausgewählt werden, welche Kategorie in welchem Bereich nicht angezeigt werden soll / darf.</p>
+			<p>Hier kann ausgewählt werden, welche Kategorie in welchem Bereich nicht angezeigt werden soll / darf.<br />
+			   Der Bereich 'Other' wird vermutlich überhaupt nicht gebraucht, da mit den anderen eigentlich schon alle abgedeckt sind ....</p>
 			<table class="widefat">
 				<thead>
 					<tr> 
 						<th>ID</th>
 						<th><?php _e('Kategorie', 'excon'); ?></th>
-						<th><?php _e('General', 'excon'); ?></th> 
 						<th><?php _e('FrontPage', 'excon'); ?></th>
 						<th><?php _e('Archive', 'excon'); ?></th>
 						<th><?php _e('Search', 'excon'); ?></th>
 						<th><?php _e('Feed', 'excon'); ?></th>
+						<th><?php _e('Other', 'excon'); ?></th>
 					</tr>
 				</thead>
 				<tbody>
