@@ -5,7 +5,7 @@ Description: Mit diesem Plugin können Content-Elemente wie Kategorie, Pages, Po
 Author: Ralf Janiszewski
 Author URI:
 Plugin URI:
-Version: 0.1.0
+Version: 0.2.0
 */
 
 /* Quit */
@@ -31,7 +31,7 @@ class ExcludeContent {
 	/**
 	 * Constructor
 	 *
-	 * @since	0.1.0
+	 * @since	0.2.0
 	 */
 	public function __construct() {
 		// load textdomain
@@ -44,6 +44,9 @@ class ExcludeContent {
 	
 	/**
 	 * create instance
+	 * 
+	 * @since	0.2.0
+	 * 
 	 * @return number
 	 */
 	public static function instance() {
@@ -105,7 +108,9 @@ class ExcludeContent {
 	
 	/**
 	 * wandelt ein array in einen sting mit negaiven Vorzeichen um
-	 *  
+	 * 
+	 * @since	0.1.0
+	 * 
 	 * @param	array	$array( 1,2,8 )
 	 * @return	string	'-1,-2,-8'
 	 */
