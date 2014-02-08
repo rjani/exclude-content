@@ -103,6 +103,9 @@ class ExcludeContent {
 			if( $exclude['other'] ) 
 				$wp_query->set('cat', $exclude['other']);
 		}
+		
+		
+		
 	}
 	
 	
