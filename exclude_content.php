@@ -103,11 +103,11 @@ class ExcludeContent {
 			if( $exclude['other'] ) 
 				$wp_query->set('cat', $exclude['other']);
 		}
-		
-		
-		
+		// TODO: lala
+		// XXX:
+		// FIXME: 
 	}
-	
+		
 	
 	/**
 	 * wandelt ein array in einen sting mit negaiven Vorzeichen um
