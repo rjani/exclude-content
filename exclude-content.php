@@ -14,12 +14,16 @@ defined('ABSPATH') OR exit;
 
 /* Hooks */
 add_action( 'plugins_loaded', 'exclude_content_init');
-function exclude_content_init() {
-	$excon = ExcludeContent::instance();
-}
+
 register_activation_hook(__FILE__,   array('ExcludeContent', 'on_activation') );
 register_deactivation_hook(__FILE__, array('ExcludeContent', 'on_deactivation') );
 register_uninstall_hook(__FILE__,    array('ExcludeContent', 'on_uninstall') );
+
+
+function exclude_content_init() {
+	$excon = ExcludeContent::instance();
+}
+
 
 
 
