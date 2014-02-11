@@ -5,7 +5,7 @@ Description: Mit diesem Plugin können Content-Elemente wie Kategorie, Pages, Po
 Author: Ralf Janiszewski
 Author URI:
 Plugin URI:
-Version: 0.2.0
+Version: 0.3.0
 */
 
 /* Quit */
@@ -75,7 +75,7 @@ class ExcludeContent {
 	 * get array id-list 
 	 * 
 	 * @since 0.2.1
-	 * @return array
+	 * @return array (always)
 	 */
 	private function get_exclude_posts() {
 		$excon_posts = get_option('excon_posts_excludes');
@@ -93,7 +93,7 @@ class ExcludeContent {
 	 * @param	object	$wp_query
 	 */
 	public function exclude_contents($wp_query) {
-		// don't exclude in backend
+		// don't exclude in backend .. redundant
 		if( is_admin() ) {
 			return;
 		}
@@ -135,8 +135,12 @@ class ExcludeContent {
 		
 		
 		// *************** Posts *********************
-		if( get_option('excon_enable_posts_exclude') ) {
-			// TODO			
+		if( get_option('excon_posts_excludes_enable') ) {
+			// exclude Posts
+			$excon_posts = $this->get_exclude_posts();
+			if( count($excon_posts) > 0 ) {
+				$wp_query->set('post__not_in', $excon_posts);
+			}
 		}
 	}
 		
@@ -206,13 +210,14 @@ class ExcludeContent {
 		
 		} else {
 			// remove from list
-			$new_data = array();
-			foreach($excon_posts as $elm) {
-				if($elm != $page_id) {
-					$new_data[] = $elm;
+			if( in_array($page_id, $excon_posts) ) {
+				$new_data = array();
+				foreach($excon_posts as $elm) {
+					if($elm != $page_id) 
+						$new_data[] = $elm;
 				}
+				update_option('excon_posts_excludes', $new_data);
 			}
-			update_option('excon_posts_excludes', $new_data);
 		}
 	}
 	
@@ -251,8 +256,8 @@ class ExcludeContent {
 	public static function on_uninstall() {
 		delete_option('excon_cat_settings');
 		delete_option('excon_only_main_query');
+		delete_option('excon_posts_excludes_enable');
 		delete_option('excon_posts_excludes');
-		delete_option('excon_enable_posts_exclude');
 	}
 
 	/**
@@ -263,7 +268,7 @@ class ExcludeContent {
 	public function register_settings() {
 		register_setting('exclude_content_settings', 'excon_cat_settings', array($this, 'validate_options_cat'));
 		register_setting('exclude_content_settings', 'excon_only_main_query');
-		register_setting('exclude_content_settings', 'excon_enable_posts_exclude');
+		register_setting('exclude_content_settings', 'excon_posts_excludes_enable');
 	}
 	
 	
@@ -322,8 +327,8 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 					<span>Für alle anderen Query (z.B. solche in Templates) finden die Einstellungen keine Anwendung</span></label>
 				</li>													
 				<li>
-					<input type="checkbox" name="excon_enable_posts_exclude" id="excon_enable_posts_exclude" value="1"  <?php checked(get_option('excon_enable_posts_exclude')); ?> />
-					<label for="excon_enable_posts_exclude">Aktiviere das Verstecken von einzelnen Beiträgen.  
+					<input type="checkbox" name="excon_posts_excludes_enable" id="excon_posts_excludes_enable" value="1"  <?php checked(get_option('excon_posts_excludes_enable')); ?> />
+					<label for="excon_posts_excludes_enable">Aktiviere das Verstecken von einzelnen Beiträgen.  
 					<span>Einzelne Beiträge werden nur dann versteckt, wenn diese Option aktiviert ist.</span></label>
 				</li>													
 			</ul>
