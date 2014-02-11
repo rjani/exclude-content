@@ -48,8 +48,8 @@ class ExcludeContent {
 		
 			// Update checkboxes after Edit page changes
 			add_action('save_post', array($this, 'update_page_excludes'), 10, 1);
-			// Add checkboxes to page
-			add_action('post_submitbox_start', array($this, 'add_page_checkbox'));
+			// Add checkboxes to page 'post_submitbox_start'
+			add_action('post_submitbox_misc_actions', array($this, 'add_page_checkbox'));
 			
 		} else {
 			// .... Tiggers Hook on the FrontEnd
@@ -182,9 +182,9 @@ class ExcludeContent {
 				$checked = 'checked="checked"';
 			} 
 		}
-		?><div>
+		?><div class="misc-pub-section">
 			<input type="checkbox" id="excon_exclude_post" name="excon_exclude_post" value="1" <?php echo $checked; ?> />
-			<label for="excon_exclude_post"><?php _e('Hide this Post', 'excon')?></label>
+			<label for="excon_exclude_post"><?php _e('Hide this Post', 'excon')?> <small>(<strong>Plugin: ExcludeContent</strong>)</small></label>
 		</div><?php 
 	}
 	
