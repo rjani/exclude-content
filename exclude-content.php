@@ -40,10 +40,21 @@ class ExcludeContent {
 	public function __construct() {
 		// load textdomain
 		// load_plugin_textdomain( 'excon', false, 'exclude_content/languages/' );
-		add_action('admin_init', array($this, 'register_settings'));
-		add_action('admin_menu', array($this, 'admin_menu'));
 		
-		add_filter('pre_get_posts', array($this, 'exclude_contents'));
+		if( is_admin() ) {
+			// .... Tiggers Hook on the Backend
+			add_action('admin_init', array($this, 'register_settings'));
+			add_action('admin_menu', array($this, 'admin_menu'));
+		
+			// Update checkboxes after Edit page changes
+			add_action('save_post', array($this, 'update_page_excludes'), 10, 1);
+			// Add checkboxes to page
+			add_action('post_submitbox_start', array($this, 'add_page_checkbox'));
+			
+		} else {
+			// .... Tiggers Hook on the FrontEnd
+			add_filter('pre_get_posts', array($this, 'exclude_contents'));
+		}
 	}
 	
 	/**
@@ -58,6 +69,20 @@ class ExcludeContent {
 			self::$instance = new ExcludeContent();
 		}
 		return self::$instance;
+	}
+	
+	/**
+	 * get array id-list 
+	 * 
+	 * @since 0.2.1
+	 * @return array
+	 */
+	private function get_exclude_posts() {
+		$excon_posts = get_option('excon_posts_excludes');
+		if( !is_array($excon_posts) ) {
+			return array();
+		}
+		return $excon_posts;
 	}
 	
 	/**
@@ -107,6 +132,12 @@ class ExcludeContent {
 			if( $exclude['other'] ) 
 				$wp_query->set('cat', $exclude['other']);
 		}
+		
+		
+		// *************** Posts *********************
+		if( get_option('excon_enable_posts_exclude') ) {
+			// TODO			
+		}
 	}
 		
 	
@@ -134,6 +165,55 @@ class ExcludeContent {
 	 */
 	public function admin_menu() {
 		add_options_page( __('Exclude Content Settings', 'excon'), __('Exclude Content', 'excon'), 'manage_options', 'exclude_content.php', array($this, 'display_settings'));
+	}
+	
+	/**
+	 * Add an Checkbox 
+	 * @since 0.2.1
+	 */
+	public function add_page_checkbox() {
+		global $post;
+		
+		$excon_posts = $this->get_exclude_posts();
+		
+		$checked = '';
+		if( is_object($post) && ($post->ID > 0) ) {
+			if( in_array($post->ID, $excon_posts) ) {
+				$checked = 'checked="checked"';
+			} 
+		}
+		?><div>
+			<input type="checkbox" id="excon_exclude_post" name="excon_exclude_post" value="1" <?php echo $checked; ?> />
+			<label for="excon_exclude_post"><?php _e('Hide this Post', 'excon')?></label>
+		</div><?php 
+	}
+	
+	
+	/**
+	 * Update der exclude Liste durchführen
+	 * 
+	 * @since 0.2.1
+	 * @param int $page_id
+	 */
+	public function update_page_excludes($page_id) {
+		// load data
+		$excon_posts = $this->get_exclude_posts();
+
+		if($_POST['excon_exclude_post'] == 1 ) {
+			// add to list && update
+			$excon_posts[] = $page_id;
+			update_option('excon_posts_excludes', array_unique($excon_posts));
+		
+		} else {
+			// remove from list
+			$new_data = array();
+			foreach($excon_posts as $elm) {
+				if($elm != $page_id) {
+					$new_data[] = $elm;
+				}
+			}
+			update_option('excon_posts_excludes', $new_data);
+		}
 	}
 	
 	
@@ -164,13 +244,15 @@ class ExcludeContent {
 	public static function on_deactivation() {}
 	
 	/**
-	 * uninstall hook
+	 * uninstall hook: delete all Settings
 	 *
 	 * @since	0.1.0
 	 */
 	public static function on_uninstall() {
 		delete_option('excon_cat_settings');
 		delete_option('excon_only_main_query');
+		delete_option('excon_posts_excludes');
+		delete_option('excon_enable_posts_exclude');
 	}
 
 	/**
@@ -181,7 +263,9 @@ class ExcludeContent {
 	public function register_settings() {
 		register_setting('exclude_content_settings', 'excon_cat_settings', array($this, 'validate_options_cat'));
 		register_setting('exclude_content_settings', 'excon_only_main_query');
+		register_setting('exclude_content_settings', 'excon_enable_posts_exclude');
 	}
+	
 	
 	/**
 	 * Valisierung der Optionsseite für Kategorie
@@ -236,6 +320,11 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 					<input type="checkbox" name="excon_only_main_query" id="excon_only_main_query" value="1"  <?php checked(get_option('excon_only_main_query')); ?> />
 					<label for="excon_only_main_query">Settings nur auf das <strong>main_query</strong> anwenden.  
 					<span>Für alle anderen Query (z.B. solche in Templates) finden die Einstellungen keine Anwendung</span></label>
+				</li>													
+				<li>
+					<input type="checkbox" name="excon_enable_posts_exclude" id="excon_enable_posts_exclude" value="1"  <?php checked(get_option('excon_enable_posts_exclude')); ?> />
+					<label for="excon_enable_posts_exclude">Aktiviere das Verstecken von einzelnen Beiträgen.  
+					<span>Einzelne Beiträge werden nur dann versteckt, wenn diese Option aktiviert ist.</span></label>
 				</li>													
 			</ul>
 			<div class="clear"></div>
