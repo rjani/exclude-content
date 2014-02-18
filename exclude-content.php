@@ -45,11 +45,14 @@ class ExcludeContent {
 			// .... Tiggers Hook on the Backend
 			add_action('admin_init', array($this, 'register_settings'));
 			add_action('admin_menu', array($this, 'admin_menu'));
-		
-			// Update checkboxes after Edit page changes
-			add_action('save_post', array($this, 'update_page_excludes'), 10, 1);
-			// Add checkboxes to page 'post_submitbox_start'
-			add_action('post_submitbox_misc_actions', array($this, 'add_page_checkbox'));
+			
+			// OK, das machen wir nur wenn erwünscht...
+			if( get_option('excon_posts_excludes_enable') ) {
+				// Update checkboxes after Edit page changes
+				add_action('save_post', array($this, 'update_page_excludes'), 10, 1);
+				// Add checkboxes to page 'post_submitbox_start'
+				add_action('post_submitbox_misc_actions', array($this, 'add_page_checkbox'));
+			}
 			
 		} else {
 			// .... Tiggers Hook on the FrontEnd
@@ -77,7 +80,7 @@ class ExcludeContent {
 	 * @since 0.2.1
 	 * @return array (always)
 	 */
-	private function get_exclude_posts() {
+	private function get_exclude_posts_ids() {
 		$excon_posts = get_option('excon_posts_excludes');
 		if( !is_array($excon_posts) ) {
 			return array();
@@ -137,7 +140,7 @@ class ExcludeContent {
 		// *************** Posts *********************
 		if( get_option('excon_posts_excludes_enable') ) {
 			// exclude Posts
-			$excon_posts = $this->get_exclude_posts();
+			$excon_posts = $this->get_exclude_posts_ids();
 			if( count($excon_posts) > 0 ) {
 				$wp_query->set('post__not_in', $excon_posts);
 			}
@@ -178,7 +181,7 @@ class ExcludeContent {
 	public function add_page_checkbox() {
 		global $post;
 		
-		$excon_posts = $this->get_exclude_posts();
+		$excon_posts = $this->get_exclude_posts_ids();
 		
 		$checked = '';
 		if( is_object($post) && ($post->ID > 0) ) {
@@ -186,10 +189,11 @@ class ExcludeContent {
 				$checked = 'checked="checked"';
 			} 
 		}
+		
 		?><div class="misc-pub-section">
 			<input type="checkbox" id="excon_exclude_post" name="excon_exclude_post" value="1" <?php echo $checked; ?> />
 			<label for="excon_exclude_post"><?php _e('Hide this Post', 'excon')?> <small>(<strong>Plugin: ExcludeContent</strong>)</small></label>
-		</div><?php 
+		</div><?php
 	}
 	
 	
@@ -201,7 +205,7 @@ class ExcludeContent {
 	 */
 	public function update_page_excludes($page_id) {
 		// load data
-		$excon_posts = $this->get_exclude_posts();
+		$excon_posts = $this->get_exclude_posts_ids();
 
 		if($_POST['excon_exclude_post'] == 1 ) {
 			// add to list && update
@@ -266,9 +270,10 @@ class ExcludeContent {
 	 * @since	0.1.0
 	 */
 	public function register_settings() {
-		register_setting('exclude_content_settings', 'excon_cat_settings', array($this, 'validate_options_cat'));
-		register_setting('exclude_content_settings', 'excon_only_main_query');
-		register_setting('exclude_content_settings', 'excon_posts_excludes_enable');
+		register_setting('exclude_content_settings',  'excon_cat_settings', array($this, 'validate_options_cat'));
+		register_setting('exclude_content_set_posts', 'excon_posts_excludes', array($this, 'validate_options_posts'));
+		register_setting('exclude_content_settings',  'excon_only_main_query');
+		register_setting('exclude_content_settings',  'excon_posts_excludes_enable');
 	}
 	
 	
@@ -296,6 +301,17 @@ class ExcludeContent {
 		return $data;
 	}
 	
+	/**
+	 * Validierung des zweiten Formulatrteils 
+	 * @param array $data (Formulardaten)
+	 * @return array (int)
+	 */
+	public function validate_options_posts($data) {
+	
+		return $data;
+	}
+	
+
 	/**
 	 * Display Setting Page
 	 * 
@@ -365,13 +381,90 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 		}
 		foreach ($rows as $k => $row) {
 			$class = (($k % 2) ? ' class="alternate"' : '');
-			echo '<tr '.$class.'><td>'.join('</td><td>', $row).'</td></tr>';
+			echo '
+			<tr '.$class.'>
+				<td>'.join('</td><td>', $row).'</td>
+			</tr>';
 		}
 		?>
 				</tbody>
 			</table>
 			<?php submit_button(); ?>
 			</form>
+			
+		<?php 
+		
+		if( get_option('excon_posts_excludes_enable') ) {
+			// lade die Posts
+			$id_array = $this->get_exclude_posts_ids();
+			
+			if( count($id_array) > 0 ) {
+				// get_posts läd alle Einträge, wenn post_in = array() ist
+				$args = array(
+					'posts_per_page'=> -1,
+					'orderby'		=> 'post_date',
+					'order'			=> 'DESC',
+					'post_type'		=> 'post',
+					'post__in'		=> $id_array,
+				);
+				$list_posts = get_posts( $args );
+				/*
+				?>
+				<form method="post" action="options.php">
+				<?php settings_fields('exclude_content_set_posts') ?>
+					<h3><?php _e('Exclude Posts', 'excon'); ?></h3>
+					<ul><?php 
+					foreach ( $list_posts as $post ) {
+						setup_postdata( $post );
+						?><li><?php echo $post->ID; ?> <?php $post->title; ?></li>
+						<pre><?php print_r($post); ?></pre>
+					<?php } ?>
+					</ul>
+				<?php submit_button(); ?>
+				</form>
+		<?php 
+	*/
+		
+/*WP_Post Object
+(
+    [ID] => 3216
+    [post_author] => 13
+    [post_date] => 2014-02-20 09:07:14
+    [post_date_gmt] => 2014-02-17 21:07:14
+    [post_content] => 
+
+Checked in to wo das Haus wohnt
+
+    [post_title] => Checked in to wo das Haus wohnt
+    [post_excerpt] => 
+    [post_status] => publish
+    [comment_status] => closed
+    [ping_status] => open
+    [post_password] => 
+    [post_name] => checked-in-to-wo-das-haus-wohnt-81
+    [to_ping] => 
+    [pinged] => 
+    [post_modified] => 2014-02-18 01:26:21
+    [post_modified_gmt] => 2014-02-18 00:26:21
+    [post_content_filtered] => 
+    [post_parent] => 0
+    [guid] => http://reclaim.rjani.de/2014/02/checked-in-to-wo-das-haus-wohnt-81/
+    [menu_order] => 0
+    [post_type] => post
+    [post_mime_type] => 
+    [comment_count] => 0
+    [filter] => raw
+)
+*/
+		
+		
+		
+			} else {
+				?><p>Keine Einträge in der Exclude-Liste</p><?php
+			}
+		} 
+		
+		?>
 		</div>
 		<?php
 	}
