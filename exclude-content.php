@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Exclude Content
-Description: Mit diesem Plugin können Content-Elemente wie Kategorie, Pages, Posts "versteckt" werden
+Description: Mit diesem Plugin können Content Kategorie "versteckt" werden
 Author: Ralf Janiszewski
 Author URI:
 Plugin URI:
@@ -47,13 +47,15 @@ class ExcludeContent {
 			add_action('admin_menu', array($this, 'admin_menu'));
 			
 			// OK, das machen wir nur wenn erwünscht...
+			// Upps tut nicht 
+			/*
 			if( get_option('excon_posts_excludes_enable') ) {
 				// Update checkboxes after Edit page changes
 				add_action('save_post', array($this, 'update_page_excludes'), 10, 1);
 				// Add checkboxes to page 'post_submitbox_start'
 				add_action('post_submitbox_misc_actions', array($this, 'add_page_checkbox'));
 			}
-			
+			*/
 		} else {
 			// .... Tiggers Hook on the FrontEnd
 			add_filter('pre_get_posts', array($this, 'exclude_contents'));
@@ -138,6 +140,8 @@ class ExcludeContent {
 		
 		
 		// *************** Posts *********************
+		// hmmm, did not work
+		/*
 		if( get_option('excon_posts_excludes_enable') ) {
 			// exclude Posts
 			$excon_posts = $this->get_exclude_posts_ids();
@@ -145,6 +149,7 @@ class ExcludeContent {
 				$wp_query->set('post__not_in', $excon_posts);
 			}
 		}
+		*/
 	}
 		
 	
@@ -178,6 +183,7 @@ class ExcludeContent {
 	 * Add an Checkbox 
 	 * @since 0.2.1
 	 */
+	/*
 	public function add_page_checkbox() {
 		global $post;
 		
@@ -195,6 +201,7 @@ class ExcludeContent {
 			<label for="excon_exclude_post"><?php _e('Hide this Post', 'excon')?> <small>(<strong>Plugin: ExcludeContent</strong>)</small></label>
 		</div><?php
 	}
+	*/
 	
 	
 	/**
@@ -203,6 +210,7 @@ class ExcludeContent {
 	 * @since 0.2.1
 	 * @param int $page_id
 	 */
+	/*
 	public function update_page_excludes($page_id) {
 		// load data
 		$excon_posts = $this->get_exclude_posts_ids();
@@ -224,6 +232,7 @@ class ExcludeContent {
 			}
 		}
 	}
+	*/
 	
 	
 	/**
@@ -260,8 +269,8 @@ class ExcludeContent {
 	public static function on_uninstall() {
 		delete_option('excon_cat_settings');
 		delete_option('excon_only_main_query');
-		delete_option('excon_posts_excludes_enable');
-		delete_option('excon_posts_excludes');
+		// delete_option('excon_posts_excludes_enable');
+		// delete_option('excon_posts_excludes');
 	}
 
 	/**
@@ -271,9 +280,9 @@ class ExcludeContent {
 	 */
 	public function register_settings() {
 		register_setting('exclude_content_settings',  'excon_cat_settings', array($this, 'validate_options_cat'));
-		register_setting('exclude_content_set_posts', 'excon_posts_excludes', array($this, 'validate_options_posts'));
 		register_setting('exclude_content_settings',  'excon_only_main_query');
-		register_setting('exclude_content_settings',  'excon_posts_excludes_enable');
+		// register_setting('exclude_content_settings',  'excon_posts_excludes_enable');
+		// register_setting('exclude_content_set_posts', 'excon_posts_excludes', array($this, 'validate_options_posts'));
 	}
 	
 	
@@ -291,7 +300,7 @@ class ExcludeContent {
 			if(isset($data[$area]) && is_array($data[$area])) {
 				foreach($data[$area] as $k => $v) {
 					// only INT
-					$data[$area][$k] = (int)$v;
+					$data[$area][$k] = intval($v);
 				}
 			} else {
 				// wenn das nicht gestzet ist, setzte es
@@ -306,11 +315,20 @@ class ExcludeContent {
 	 * @param array $data (Formulardaten)
 	 * @return array (int)
 	 */
+	/*
 	public function validate_options_posts($data) {
-	
+		if(is_array($data)) {
+			// only ints
+			foreach($data as $k => $v) {
+				$data[$k] = intval($v);
+			}
+		} else {
+			$data = array();
+		}
+		
 		return $data;
 	}
-	
+	*/
 
 	/**
 	 * Display Setting Page
@@ -392,40 +410,47 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 			<?php submit_button(); ?>
 			</form>
 			
-		<?php 
+		<?php
+		/*
+		// Zeige die Liste der exclude_psois_ids 
+		$id_array = $this->get_exclude_posts_ids();
 		
-		if( get_option('excon_posts_excludes_enable') ) {
-			// lade die Posts
-			$id_array = $this->get_exclude_posts_ids();
+		if( get_option('excon_posts_excludes_enable') && count($id_array) > 0 ) {
+			// get_posts läd alle Einträge, wenn post_in = array() ist
+			$args = array(
+				'posts_per_page'=> -1,
+				'orderby'		=> 'post_date',
+				'order'			=> 'DESC',
+				'post_type'		=> 'post',
+				'post__in'		=> $id_array,
+				'suppress_filters' => false
+			);
+			$list_posts = get_posts( $args );
+			?>
+			<pre><?php 
+			print_r($id_array);
+			print_r($args);
+			print_r($list_posts);
+			?></pre>
 			
-			if( count($id_array) > 0 ) {
-				// get_posts läd alle Einträge, wenn post_in = array() ist
-				$args = array(
-					'posts_per_page'=> -1,
-					'orderby'		=> 'post_date',
-					'order'			=> 'DESC',
-					'post_type'		=> 'post',
-					'post__in'		=> $id_array,
-				);
-				$list_posts = get_posts( $args );
-				/*
-				?>
-				<form method="post" action="options.php">
-				<?php settings_fields('exclude_content_set_posts') ?>
-					<h3><?php _e('Exclude Posts', 'excon'); ?></h3>
-					<ul><?php 
-					foreach ( $list_posts as $post ) {
-						setup_postdata( $post );
-						?><li><?php echo $post->ID; ?> <?php $post->title; ?></li>
-						<pre><?php print_r($post); ?></pre>
-					<?php } ?>
-					</ul>
+			?>
+			<form method="post" action="options.php">
+			<?php settings_fields('exclude_content_set_posts') ?>
+				<h3><?php _e('Exclude Posts', 'excon'); ?></h3>
+				<ul><?php 
+				foreach ( $list_posts as $post ) {
+					setup_postdata( $post );
+					$id = $post->ID;
+					?><li><input type="checkbox" name="excon_posts_excludes[]" id="excon_posts_excludes_<?php echo $id;?>" value="<?php echo $id; ?>" checked="checked" />
+					      <label for="excon_posts_excludes_<?php echo $id;?>"><?php $post->post_title; ?> (ID:<?php echo $id;?>)</label></li><?php 
+				} ?>
+				</ul>
 				<?php submit_button(); ?>
-				</form>
-		<?php 
-	*/
+			</form>
+			<?php 
+
 		
-/*WP_Post Object
+WP_Post Object
 (
     [ID] => 3216
     [post_author] => 13
@@ -455,15 +480,14 @@ Checked in to wo das Haus wohnt
     [comment_count] => 0
     [filter] => raw
 )
-*/
+
 		
 		
 		
-			} else {
-				?><p>Keine Einträge in der Exclude-Liste</p><?php
-			}
-		} 
-		
+		} else {
+			?><p>Keine Einträge in der Exclude-Liste</p><?php
+		}
+		*/
 		?>
 		</div>
 		<?php
