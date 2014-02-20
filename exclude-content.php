@@ -5,7 +5,7 @@ Description: Mit diesem Plugin können Content Kategorie "versteckt" werden
 Author: Ralf Janiszewski
 Author URI:
 Plugin URI:
-Version: 0.3.0
+Version: 0.3.1
 */
 
 /* Quit */
@@ -359,12 +359,14 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 					<input type="checkbox" name="excon_only_main_query" id="excon_only_main_query" value="1"  <?php checked(get_option('excon_only_main_query')); ?> />
 					<label for="excon_only_main_query">Settings nur auf das <strong>main_query</strong> anwenden.  
 					<span>Für alle anderen Query (z.B. solche in Templates) finden die Einstellungen keine Anwendung</span></label>
-				</li>													
+				</li>
+<?php /*
 				<li>
 					<input type="checkbox" name="excon_posts_excludes_enable" id="excon_posts_excludes_enable" value="1"  <?php checked(get_option('excon_posts_excludes_enable')); ?> />
 					<label for="excon_posts_excludes_enable">Aktiviere das Verstecken von einzelnen Beiträgen.  
 					<span>Einzelne Beiträge werden nur dann versteckt, wenn diese Option aktiviert ist.</span></label>
-				</li>													
+				</li>
+*/ ?>													
 			</ul>
 			<div class="clear"></div>
 			
