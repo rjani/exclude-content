@@ -1,7 +1,7 @@
 exclude-content
 ===============
 
-A WordPress Plugin to hide Categories ~~, Pages and Posts~~
+A WordPress Plugin to hide Categories, Pages and Posts
 
 
 ## Installation

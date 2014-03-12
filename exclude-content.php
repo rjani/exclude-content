@@ -5,7 +5,7 @@ Description: Mit diesem Plugin können Content Kategorie "versteckt" werden
 Author: Ralf Janiszewski
 Author URI:
 Plugin URI:
-Version: 0.3.1
+Version: 0.3.2
 */
 
 /* Quit */
@@ -38,7 +38,7 @@ class ExcludeContent {
 	 * @since	0.2.0
 	 */
 	public function __construct() {
-		// load textdomain
+		// TODO: load textdomain
 		// load_plugin_textdomain( 'excon', false, 'exclude-content/languages/' );
 		
 		if( is_admin() ) {
@@ -47,7 +47,6 @@ class ExcludeContent {
 			add_action('admin_menu', array($this, 'admin_menu'));
 			
 			// OK, das machen wir nur wenn erwünscht...
-			// Upps tut nicht (Warum tut es nicht ????) 
 			if( get_option('excon_posts_excludes_enable') ) {
 				// Update checkboxes after Edit page changes
 				add_action('save_post', array($this, 'update_page_excludes'), 10, 1);
@@ -96,7 +95,7 @@ class ExcludeContent {
 	 * @param	object	$wp_query
 	 */
 	public function exclude_contents($wp_query) {
-		// don't exclude in backend .. redundant
+		// don't exclude in backend .. redundant see __construct
 		if( is_admin() ) {
 			return;
 		}
@@ -138,7 +137,6 @@ class ExcludeContent {
 		
 		
 		// *************** Posts *********************
-		// hmmm, did not work
 		if( get_option('excon_posts_excludes_enable') ) {
 			// exclude Posts
 			$excon_posts = $this->get_exclude_posts_ids();
@@ -180,8 +178,10 @@ class ExcludeContent {
 	 * @since 0.2.1
 	 */
 	public function add_page_checkbox() {
+		// get the current post
 		global $post;
 		
+		// load id_array
 		$excon_posts = $this->get_exclude_posts_ids();
 		
 		$checked = '';
@@ -208,14 +208,16 @@ class ExcludeContent {
 	public function update_page_excludes($page_id) {
 		// verify if this is an auto save routine.
 		// If it is our form has not been submitted, so we dont want to do anything
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
+		}
 		
 		// If this is a revision, get real post ID
-		if ( $parent_id = wp_is_post_revision( $page_id ) )
+		if ( $parent_id = wp_is_post_revision( $page_id ) ) {
 			$page_id = $parent_id;
+		}
 		
-		// load data
+		// load Exclude ID
 		$excon_posts = $this->get_exclude_posts_ids();
 
 		if($_POST['excon_exclude_post'] == '1' ) {
@@ -285,6 +287,7 @@ class ExcludeContent {
 		register_setting('exclude_content_settings',  'excon_cat_settings', array($this, 'validate_options_cat'));
 		register_setting('exclude_content_settings',  'excon_only_main_query');
 		register_setting('exclude_content_settings',  'excon_posts_excludes_enable');
+		// 
 		register_setting('exclude_content_set_posts', 'excon_posts_excludes', array($this, 'validate_options_posts'));
 	}
 	
@@ -314,7 +317,10 @@ class ExcludeContent {
 	}
 	
 	/**
-	 * Validierung des zweiten Formulatrteils 
+	 * Validierung des zweiten Formularteils (Liste der Posts)
+	 * 
+	 * @since 0.3.1
+	 * 
 	 * @param array $data (Formulardaten)
 	 * @return array (int)
 	 */
@@ -429,64 +435,47 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 				'suppress_filters' => false
 			);
 			$list_posts = get_posts( $args );
-			?>
-			<pre><?php 
-			print_r($id_array);
-			print_r($args);
-			print_r($list_posts);
-			?></pre>
 			
 			?>
 			<form method="post" action="options.php">
 			<?php settings_fields('exclude_content_set_posts') ?>
 				<h3><?php _e('Exclude Posts', 'excon'); ?></h3>
-				<ul><?php 
+				<p>Hier aufgelistete Einträge werden nicht angezeigt.</p>
+				<table class="widefat">
+					<thead>
+						<tr> 
+							<th></th>
+							<th>ID</th>
+							<th><?php _e('Titel', 'excon'); ?></th>
+							<th><?php _e('Kategorie', 'excon'); ?></th>
+							<th><?php _e('Datum', 'excon'); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php
+				// $post must be global .... 
+				global $post;
+				
+				$k = 0;
 				foreach ( $list_posts as $post ) {
 					setup_postdata( $post );
-					$id = $post->ID;
-					?><li><input type="checkbox" name="excon_posts_excludes[]" id="excon_posts_excludes_<?php echo $id;?>" value="<?php echo $id; ?>" checked="checked" />
-					      <label for="excon_posts_excludes_<?php echo $id;?>"><?php $post->post_title; ?> (ID:<?php echo $id;?>)</label></li><?php 
-				} ?>
-				</ul>
+					$class = (($k % 2) ? ' class="alternate"' : '');
+					$k++;
+					?><tr<?php echo $class;?>>
+						<td><input type="checkbox" name="excon_posts_excludes[]" value="<?php the_ID(); ?>" checked="checked" /></td>
+						<td><?php the_ID(); ?></td>
+						<td><?php edit_post_link( get_the_title() );?></td>
+						<td><?php the_category(', '); ?></td>
+						<td><?php echo get_the_date(); ?></td>
+					</tr>
+				<?php 
+				} 
+				?></tbody>
+				</table>
 				<?php submit_button(); ?>
 			</form>
-			<?php 
-/*
-		
-WP_Post Object
-(
-    [ID] => 3216
-    [post_author] => 13
-    [post_date] => 2014-02-20 09:07:14
-    [post_date_gmt] => 2014-02-17 21:07:14
-    [post_content] => 
-
-Checked in to wo das Haus wohnt
-
-    [post_title] => Checked in to wo das Haus wohnt
-    [post_excerpt] => 
-    [post_status] => publish
-    [comment_status] => closed
-    [ping_status] => open
-    [post_password] => 
-    [post_name] => checked-in-to-wo-das-haus-wohnt-81
-    [to_ping] => 
-    [pinged] => 
-    [post_modified] => 2014-02-18 01:26:21
-    [post_modified_gmt] => 2014-02-18 00:26:21
-    [post_content_filtered] => 
-    [post_parent] => 0
-    [guid] => http://reclaim.rjani.de/2014/02/checked-in-to-wo-das-haus-wohnt-81/
-    [menu_order] => 0
-    [post_type] => post
-    [post_mime_type] => 
-    [comment_count] => 0
-    [filter] => raw
-)
-
-	*/
-		
-		
+			
+			<?php
 		} else {
 			?><p>Keine Einträge in der Exclude-Liste</p><?php
 		}
