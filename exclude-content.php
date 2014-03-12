@@ -82,7 +82,8 @@ class ExcludeContent {
 	private function get_exclude_posts_ids() {
 		$excon_posts = get_option('excon_posts_excludes');
 		if( !is_array($excon_posts) ) {
-			return array();
+			// wenn es kein array ist, setzte das ding in eines ....
+			return array($excon_posts);
 		}
 		return $excon_posts;
 	}
@@ -192,8 +193,8 @@ class ExcludeContent {
 		}
 		
 		?><div class="misc-pub-section">
-			<input type="checkbox" id="excon_exclude_post" name="excon_exclude_post" value="1" <?php echo $checked; ?> />
-			<label for="excon_exclude_post"><?php _e('Hide this Post', 'excon')?> <small>(<strong>Plugin: ExcludeContent</strong>)</small></label>
+			<input type="checkbox" id="excon_excludepostform" name="excon_excludepostform" value="1" <?php echo $checked; ?> />
+			<label for="excon_excludepostform"><?php _e('Hide this Post', 'excon')?> <small>(<strong>Plugin: ExcludeContent</strong>)</small></label>
 		</div><?php
 	}
 
@@ -220,7 +221,7 @@ class ExcludeContent {
 		// load Exclude ID
 		$excon_posts = $this->get_exclude_posts_ids();
 
-		if($_POST['excon_exclude_post'] == '1' ) {
+		if($_POST['excon_excludepostform'] == '1' ) {
 			// add to list && update
 			$excon_posts[] = $page_id;
 			update_option('excon_posts_excludes', array_unique($excon_posts));
@@ -287,7 +288,6 @@ class ExcludeContent {
 		register_setting('exclude_content_settings',  'excon_cat_settings', array($this, 'validate_options_cat'));
 		register_setting('exclude_content_settings',  'excon_only_main_query');
 		register_setting('exclude_content_settings',  'excon_posts_excludes_enable');
-		// 
 		register_setting('exclude_content_set_posts', 'excon_posts_excludes', array($this, 'validate_options_posts'));
 	}
 	
@@ -473,20 +473,28 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 				
 				// wenn Vorhanden, dann auch noch die Pages
 				$args['post_type'] = 'page';
-				$list_pages = get_pages( $args );
-				if($list_pages > 0) {
-					foreach ( $list_pages as $post ) {
+				$list_posts = get_pages( $args );
+				
+				if($list_posts > 0) {
+					foreach ( $list_posts as $post ) {
 						setup_postdata( $post );
-						$class = (($k % 2) ? ' class="alternate"' : '');
-						$k++;
+						// 
+						// BUG: ????
+						// hmmm, aus irgend einem grund tauchen Pages, die herausgenommen wurden 
+						// trotzdem wieder in der Liste auf
+						// 
+						if( in_array(get_the_ID(), $id_array) ) {
+							$class = (($k % 2) ? ' class="alternate"' : '');
+							$k++;
 					?><tr<?php echo $class;?>>
 						<td><input type="checkbox" name="excon_posts_excludes[]" value="<?php the_ID(); ?>" checked="checked" /></td>
 						<td><?php the_ID(); ?></td>
-						<td><?php edit_post_link( get_the_title() );?></td>
+						<td><?php echo get_the_title();?></td>
 						<td>Seiten</td>
 						<td><?php echo get_the_date(); ?></td>
 					</tr>
-					<?php 
+					<?php
+						} 
 					}
 				}
 				?></tbody>
