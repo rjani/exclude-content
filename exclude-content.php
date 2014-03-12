@@ -39,7 +39,7 @@ class ExcludeContent {
 	 */
 	public function __construct() {
 		// load textdomain
-		// load_plugin_textdomain( 'excon', false, 'exclude_content/languages/' );
+		// load_plugin_textdomain( 'excon', false, 'exclude-content/languages/' );
 		
 		if( is_admin() ) {
 			// .... Tiggers Hook on the Backend
@@ -47,15 +47,13 @@ class ExcludeContent {
 			add_action('admin_menu', array($this, 'admin_menu'));
 			
 			// OK, das machen wir nur wenn erwünscht...
-			// Upps tut nicht 
-			/*
+			// Upps tut nicht (Warum tut es nicht ????) 
 			if( get_option('excon_posts_excludes_enable') ) {
 				// Update checkboxes after Edit page changes
 				add_action('save_post', array($this, 'update_page_excludes'), 10, 1);
 				// Add checkboxes to page 'post_submitbox_start'
 				add_action('post_submitbox_misc_actions', array($this, 'add_page_checkbox'));
 			}
-			*/
 		} else {
 			// .... Tiggers Hook on the FrontEnd
 			add_filter('pre_get_posts', array($this, 'exclude_contents'));
@@ -141,7 +139,6 @@ class ExcludeContent {
 		
 		// *************** Posts *********************
 		// hmmm, did not work
-		/*
 		if( get_option('excon_posts_excludes_enable') ) {
 			// exclude Posts
 			$excon_posts = $this->get_exclude_posts_ids();
@@ -149,7 +146,6 @@ class ExcludeContent {
 				$wp_query->set('post__not_in', $excon_posts);
 			}
 		}
-		*/
 	}
 		
 	
@@ -183,7 +179,6 @@ class ExcludeContent {
 	 * Add an Checkbox 
 	 * @since 0.2.1
 	 */
-	/*
 	public function add_page_checkbox() {
 		global $post;
 		
@@ -201,7 +196,7 @@ class ExcludeContent {
 			<label for="excon_exclude_post"><?php _e('Hide this Post', 'excon')?> <small>(<strong>Plugin: ExcludeContent</strong>)</small></label>
 		</div><?php
 	}
-	*/
+
 	
 	
 	/**
@@ -210,12 +205,20 @@ class ExcludeContent {
 	 * @since 0.2.1
 	 * @param int $page_id
 	 */
-	/*
 	public function update_page_excludes($page_id) {
+		// verify if this is an auto save routine.
+		// If it is our form has not been submitted, so we dont want to do anything
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
+			return;
+		
+		// If this is a revision, get real post ID
+		if ( $parent_id = wp_is_post_revision( $page_id ) )
+			$page_id = $parent_id;
+		
 		// load data
 		$excon_posts = $this->get_exclude_posts_ids();
 
-		if($_POST['excon_exclude_post'] == 1 ) {
+		if($_POST['excon_exclude_post'] == '1' ) {
 			// add to list && update
 			$excon_posts[] = $page_id;
 			update_option('excon_posts_excludes', array_unique($excon_posts));
@@ -232,7 +235,7 @@ class ExcludeContent {
 			}
 		}
 	}
-	*/
+
 	
 	
 	/**
@@ -269,8 +272,8 @@ class ExcludeContent {
 	public static function on_uninstall() {
 		delete_option('excon_cat_settings');
 		delete_option('excon_only_main_query');
-		// delete_option('excon_posts_excludes_enable');
-		// delete_option('excon_posts_excludes');
+		delete_option('excon_posts_excludes_enable');
+		delete_option('excon_posts_excludes');
 	}
 
 	/**
@@ -281,8 +284,8 @@ class ExcludeContent {
 	public function register_settings() {
 		register_setting('exclude_content_settings',  'excon_cat_settings', array($this, 'validate_options_cat'));
 		register_setting('exclude_content_settings',  'excon_only_main_query');
-		// register_setting('exclude_content_settings',  'excon_posts_excludes_enable');
-		// register_setting('exclude_content_set_posts', 'excon_posts_excludes', array($this, 'validate_options_posts'));
+		register_setting('exclude_content_settings',  'excon_posts_excludes_enable');
+		register_setting('exclude_content_set_posts', 'excon_posts_excludes', array($this, 'validate_options_posts'));
 	}
 	
 	
@@ -315,7 +318,6 @@ class ExcludeContent {
 	 * @param array $data (Formulardaten)
 	 * @return array (int)
 	 */
-	/*
 	public function validate_options_posts($data) {
 		if(is_array($data)) {
 			// only ints
@@ -328,7 +330,7 @@ class ExcludeContent {
 		
 		return $data;
 	}
-	*/
+
 
 	/**
 	 * Display Setting Page
@@ -360,13 +362,13 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 					<label for="excon_only_main_query">Settings nur auf das <strong>main_query</strong> anwenden.  
 					<span>Für alle anderen Query (z.B. solche in Templates) finden die Einstellungen keine Anwendung</span></label>
 				</li>
-<?php /*
+
 				<li>
 					<input type="checkbox" name="excon_posts_excludes_enable" id="excon_posts_excludes_enable" value="1"  <?php checked(get_option('excon_posts_excludes_enable')); ?> />
 					<label for="excon_posts_excludes_enable">Aktiviere das Verstecken von einzelnen Beiträgen.  
 					<span>Einzelne Beiträge werden nur dann versteckt, wenn diese Option aktiviert ist.</span></label>
 				</li>
-*/ ?>													
+													
 			</ul>
 			<div class="clear"></div>
 			
@@ -413,12 +415,11 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 			</form>
 			
 		<?php
-		/*
 		// Zeige die Liste der exclude_psois_ids 
 		$id_array = $this->get_exclude_posts_ids();
 		
 		if( get_option('excon_posts_excludes_enable') && count($id_array) > 0 ) {
-			// get_posts läd alle Einträge, wenn post_in = array() ist
+			// get_posts läd alle Einträge, wenn post__in = array() ist
 			$args = array(
 				'posts_per_page'=> -1,
 				'orderby'		=> 'post_date',
@@ -450,7 +451,7 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 				<?php submit_button(); ?>
 			</form>
 			<?php 
-
+/*
 		
 WP_Post Object
 (
@@ -483,13 +484,12 @@ Checked in to wo das Haus wohnt
     [filter] => raw
 )
 
-		
+	*/
 		
 		
 		} else {
 			?><p>Keine Einträge in der Exclude-Liste</p><?php
 		}
-		*/
 		?>
 		</div>
 		<?php
