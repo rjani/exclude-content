@@ -469,7 +469,26 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 						<td><?php echo get_the_date(); ?></td>
 					</tr>
 				<?php 
-				} 
+				}
+				
+				// wenn Vorhanden, dann auch noch die Pages
+				$args['post_type'] = 'page';
+				$list_pages = get_pages( $args );
+				if($list_pages > 0) {
+					foreach ( $list_pages as $post ) {
+						setup_postdata( $post );
+						$class = (($k % 2) ? ' class="alternate"' : '');
+						$k++;
+					?><tr<?php echo $class;?>>
+						<td><input type="checkbox" name="excon_posts_excludes[]" value="<?php the_ID(); ?>" checked="checked" /></td>
+						<td><?php the_ID(); ?></td>
+						<td><?php edit_post_link( get_the_title() );?></td>
+						<td>Seiten</td>
+						<td><?php echo get_the_date(); ?></td>
+					</tr>
+					<?php 
+					}
+				}
 				?></tbody>
 				</table>
 				<?php submit_button(); ?>
