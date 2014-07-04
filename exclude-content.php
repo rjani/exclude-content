@@ -5,7 +5,7 @@ Description: Mit diesem Plugin können Content Kategorie "versteckt" werden
 Author: Ralf Janiszewski
 Author URI:
 Plugin URI:
-Version: 0.3.2
+Version: 0.3.3
 */
 
 /* Quit */
@@ -29,7 +29,7 @@ function exclude_content_init() {
 
 class ExcludeContent {
 	
-	private static $instance = 0;
+	private static $instance = NULL;
 	private static $cat_areas = array('home', 'archive', 'search', 'feed', 'other');
 
 	/**
@@ -56,6 +56,12 @@ class ExcludeContent {
 		} else {
 			// .... Tiggers Hook on the FrontEnd
 			add_filter('pre_get_posts', array($this, 'exclude_contents'));
+			
+			// excon_cathide_enable
+			if( get_option('excon_cathide_enable') ) {
+				add_filter('get_the_categories',     array($this, 'cathide_hide_categories') );
+				add_filter('widget_categories_args', array($this, 'cathide_widget_categories_args_filter'), 10, 1);
+			}
 		}
 	}
 	
@@ -67,7 +73,7 @@ class ExcludeContent {
 	 * @return number
 	 */
 	public static function instance() {
-		if ( self::$instance == 0 ) {
+		if ( self::$instance == NULL ) {
 			self::$instance = new ExcludeContent();
 		}
 		return self::$instance;
@@ -97,9 +103,8 @@ class ExcludeContent {
 	 */
 	public function exclude_contents($wp_query) {
 		// don't exclude in backend .. redundant see __construct
-		if( is_admin() ) {
-			return;
-		}
+		if( is_admin() ) return;
+		
 		// if only_main_query is set and the query is NOT the main_query ...
 		if( get_option('excon_only_main_query') === 1 && !$wp_query->is_main_query() ) { 
 			 return;
@@ -146,7 +151,66 @@ class ExcludeContent {
 			}
 		}
 	}
+	
+	
+	/**
+	 * entfernt Kategorie aus der Kategorien-Liste. 
+	 * Die Inhalte bleiben vollständig erhalten. Wir also der Link /categorie/NAME aufgerufen, 
+	 * werden alle Inhalte der Kategorie angezeigt...
+	 * Wird aufgerufen mit add_filter('get_the_categories',  array($this, 'cathide_hide_categories') );
+	 * 
+	 * Es werden alle Kategorien die mit einem Unterstrich beginnen entfernt
+	 * 
+	 * @since 	0.3.3
+	 * @param 	array $categories
+	 * @return 	array
+	 */
+	public function cathide_hide_categories( $categories ) {
+		// Backend: don't do it ... redundant see __construct 
+		if( is_admin() ) return $categories;
 		
+		$ret_cats = array();
+		foreach( $categories as $category ) {
+			if( strncmp($category->name, '_', 1) == 0) {
+				continue;
+			}
+			$ret_cats[] = $category;
+		}
+		
+		return $ret_cats;
+	} 
+	
+	/**
+	 * Entfernt die ausgeblendeten Kategorien auch aus dem Kategorien Widget
+	 * Wird aufgerufen mit add_filter('widget_categories_args', array($this, 'cathide_widget_categories_args_filter'), 10, 1);
+	 * 
+	 * @since	0.3.3
+	 * @param 	array $cat_args
+	 * @return 	array $cat_args
+	 */
+	public function cathide_widget_categories_args_filter( $cat_args ) {
+		$exclude_hide = array();
+		$categories = get_categories();
+		foreach( $categories as $category ) {
+			if( strncmp($category->name, '_', 1) != 0) {
+				continue;
+			}
+			$exclude_hide[] = $category->term_id;
+		}
+		
+		// bestehendes mitnehmen
+		if( isset($cat_args['exclude']) && ! empty($cat_args['exclude']) ) {
+			$exclude_hide[] = $cat_args['exclude'];
+		}
+		
+		// ... und zusammenführen
+		if( count($exclude_hide) > 0 ) {
+			$cat_args['exclude'] = join(',', $exclude_hide);
+		}
+			
+		return $cat_args;
+	}
+	
 	
 	/**
 	 * wandelt ein array in einen sting mit negaiven Vorzeichen um
@@ -277,6 +341,7 @@ class ExcludeContent {
 		delete_option('excon_only_main_query');
 		delete_option('excon_posts_excludes_enable');
 		delete_option('excon_posts_excludes');
+		delete_option('excon_cathide_enable');
 	}
 
 	/**
@@ -288,12 +353,15 @@ class ExcludeContent {
 		register_setting('exclude_content_settings',  'excon_cat_settings', array($this, 'validate_options_cat'));
 		register_setting('exclude_content_settings',  'excon_only_main_query');
 		register_setting('exclude_content_settings',  'excon_posts_excludes_enable');
+		register_setting('exclude_content_settings',  'excon_cathide_enable');
+		// register_setting('exclude_content_settings',  'excon_cathide_cats');
+		
 		register_setting('exclude_content_set_posts', 'excon_posts_excludes', array($this, 'validate_options_posts'));
 	}
 	
 	
 	/**
-	 * Valisierung der Optionsseite für Kategorie
+	 * Validierung der Optionsseite für Kategorie
 	 *
 	 * @since	0.1.0
 	 *
@@ -346,15 +414,14 @@ class ExcludeContent {
 	public function display_settings() {
 		$cat_settings = get_option('excon_cat_settings');
 		$categories   = get_categories(array('hide_empty' => 0,	'order' => 'ASC'));
-		$only_main    = get_option('excon_only_main_query');
 		?>
 <style>
 ul.excon {}
 ul.excon > li {width: 330px;margin: 0 20px 36px 0;float:left;padding: 10px 0 12px 12px;position: relative;background: #fff;list-style: none;border-radius: 6px;white-space: nowrap;}
 ul.excon > li input[type="checkbox"] {display: inline-block;margin: 0 8px 0 0;}
 ul.excon > li select {height: 20px;font-size: 11px;text-align: center;background: #f8f8f9;}
-ul.excon > li label {cursor: default;display:inline-block;overflow: hidden;line-height: 24px;}
-ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:block;font-size:12px;line-height:16px;}
+ul.excon > li label.excon_btn {cursor: default;display:inline-block;overflow: hidden;line-height: 24px;}
+ul.excon > li label.excon_btn span {white-space:normal;width:300px;color: #8e959c;display:block;font-size:12px;line-height:16px;}
 </style>
 		
 		<div class="wrap" id="excon_settings">
@@ -365,21 +432,27 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 			<ul class="excon">
 				<li>
 					<input type="checkbox" name="excon_only_main_query" id="excon_only_main_query" value="1"  <?php checked(get_option('excon_only_main_query')); ?> />
-					<label for="excon_only_main_query">Settings nur auf das <strong>main_query</strong> anwenden.  
+					<label class="excon_btn" for="excon_only_main_query">Settings nur auf das <strong>main_query</strong> anwenden.  
 					<span>Für alle anderen Query (z.B. solche in Templates) finden die Einstellungen keine Anwendung</span></label>
 				</li>
 
 				<li>
 					<input type="checkbox" name="excon_posts_excludes_enable" id="excon_posts_excludes_enable" value="1"  <?php checked(get_option('excon_posts_excludes_enable')); ?> />
-					<label for="excon_posts_excludes_enable">Aktiviere das Verstecken von einzelnen Beiträgen.  
+					<label class="excon_btn" for="excon_posts_excludes_enable">Aktiviere das Verstecken von einzelnen Beiträgen.  
 					<span>Einzelne Beiträge werden nur dann versteckt, wenn diese Option aktiviert ist.</span></label>
 				</li>
-													
+
+				<li>
+					<input type="checkbox" name="excon_cathide_enable" id="excon_cathide_enable" value="1"  <?php checked(get_option('excon_cathide_enable')); ?> />
+					<label class="excon_btn" for="excon_cathide_enable">Aktiviere das Verstecken von Kategorien.  
+					<span>Kategorien die mit einem "_" beginnen werden nicht angezeigt, bleiben aber voll funktionsfähig.</span></label>
+				</li>
+				
 			</ul>
 			<div class="clear"></div>
 			
 			<h3><?php _e('Category Settings', 'excon')?></h3>
-			<p>Hier kann ausgewählt werden, welche Kategorie in welchem Bereich nicht angezeigt werden soll / darf.<br />
+			<p>Hier kann ausgewählt werden, welche <strong>Inhalte</strong> aus welcher Kategorie in welchem Bereich nicht angezeigt werden soll / darf.<br />
 			   Der Bereich 'Other' wird vermutlich überhaupt nicht gebraucht, da mit den anderen eigentlich schon alle abgedeckt sind ....</p>
 			<table class="widefat">
 				<thead>
@@ -403,7 +476,8 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 			// $rows[$i][] = $cat->category_count;
 			foreach (self::$cat_areas as $area) {
 				$checked = ( in_array($cat->cat_ID, $cat_settings[$area]) ? ' checked="checked"' : '');
-				$rows[$i][] = '<input type="checkbox" name="excon_cat_settings['.$area.'][]" value="'.$cat->cat_ID.'" '.$checked.' /><small>'.$cat->cat_name.'</small>';
+				$label   = "excon_areacatid_" . $area . $cat->cat_ID;
+				$rows[$i][] = '<input type="checkbox" name="excon_cat_settings['.$area.'][]" value="'.$cat->cat_ID.'" id="'.$label.'" '.$checked.' /><label for="'.$label.'"><small>'.$cat->cat_name.'</small></label>';
 			}
 			$i++;
 		}
@@ -421,7 +495,7 @@ ul.excon > li label span {white-space:normal;width:300px;color: #8e959c;display:
 			</form>
 			
 		<?php
-		// Zeige die Liste der exclude_psois_ids 
+		// Zeige die Liste der exclude_posts_ids 
 		$id_array = $this->get_exclude_posts_ids();
 		
 		if( get_option('excon_posts_excludes_enable') && count($id_array) > 0 ) {
